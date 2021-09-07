@@ -35,7 +35,7 @@ class ContactControllerTest extends TestCase
         $this->app['config']->set('system.pagination_amount', 5);
 
 
-        $request = $this->get(route('api.v1.contact.index'));
+        $request = $this->getJson(route('api.v1.contact.index'));
 
 
         $request->assertOk()
@@ -54,7 +54,7 @@ class ContactControllerTest extends TestCase
             ->assertJson(
                 fn (AssertableJson $json) =>
                 $json
-                ->has('data', 5)
+                    ->has('data', 5)
                     ->has(
                         'data.0',
                         fn ($json) =>
@@ -66,11 +66,11 @@ class ContactControllerTest extends TestCase
     }
 
     /** @test */
-    public function it_can_create_new_contacts()
+    public function it_can_create_a_new_contact()
     {
         $this->assertEquals(0, Contact::count());
 
-        $response = $this->post(route('api.v1.contact.store'), [
+        $response = $this->postJson(route('api.v1.contact.store'), [
             'first_name' => $this->faker->firstName,
             'last_name' => $this->faker->lastName,
             'email' => $this->faker->unique()->email,
@@ -85,7 +85,7 @@ class ContactControllerTest extends TestCase
     }
 
     /** @test */
-    public function it_can_update_contacts()
+    public function it_can_update_a_contact()
     {
         $contact = Contact::factory()->create([
             'first_name' => 'Nikola',
@@ -96,7 +96,7 @@ class ContactControllerTest extends TestCase
         $this->assertEquals('nikola.susa@omure.com', $contact->email);
 
 
-        $response = $this->put(route('api.v1.contact.update', [$contact]), [
+        $response = $this->putJson(route('api.v1.contact.update', [$contact]), [
             'first_name' => 'Viktor',
             'last_name' => 'Ryshkov',
             'email' => 'viktor.ryshkov@omure.com',
@@ -112,6 +112,50 @@ class ContactControllerTest extends TestCase
     /** @test */
     public function it_validate_required_fields()
     {
-        $this->markTestIncomplete();
+         $this->assertEquals(0, Contact::count());
+
+        $response = $this->postJson(route('api.v1.contact.store'), [
+            'first_name' => '',
+            'last_name' => '',
+            'email' => '',
+            'phone_number' => '',
+            'lead_source' => '',
+        ]);
+        $this->assertEquals(0, Contact::count());
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['last_name', 'email']);
+        $response->assertJsonMissingValidationErrors(['first_name', 'phone_number', 'lead_source']);
+
+        /**
+         * Updating
+         */
+        $contact = Contact::factory()->create([
+            'email' => 'some.known@email.com'
+        ]);
+
+        $response = $this->putJson(route('api.v1.contact.update', [$contact]), [
+            'first_name' => '',
+            'last_name' => '',
+            'email' => '',
+            'phone_number' => '',
+            'lead_source' => '',
+        ]);
+
+        $this->assertEquals(1, Contact::count());
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['last_name', 'email']);
+        $response->assertJsonMissingValidationErrors(['first_name', 'phone_number', 'lead_source']);
+
+        /**
+         * Creating with duplicate email
+         */
+        $response = $this->postJson(route('api.v1.contact.store'), [
+            'last_name' => 'Doe',
+            'email' => 'some.known@email.com'
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['email']);
     }
 }
