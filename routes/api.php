@@ -21,4 +21,5 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum'], 'as' => 'api.v1.'], function () {
     Route::get('/contacts', [ContactController::class, 'index'])->name('contact.index');
+    Route::post('/contacts', [ContactController::class, 'store'])->name('contact.store');
 });

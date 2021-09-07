@@ -13,4 +13,9 @@ class ContactController extends Controller
     {
         return ContactResource::collection(Contact::paginate(config('system.pagination_amount')));
     }
+
+    public function store(Request $request)
+    {
+        return Contact::create($request->all());
+    }
 }

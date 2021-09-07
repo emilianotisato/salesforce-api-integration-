@@ -11,7 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class ContactControllerTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, WithFaker;
 
     public function setUp(): void
     {
@@ -21,11 +21,17 @@ class ContactControllerTest extends TestCase
     }
 
     /** @test */
+    public function it_only_allows_authenticated_users()
+    {
+        $this->markTestIncomplete();
+    }
+
+    /** @test */
     public function it_list_paginated_contacts()
     {
-        Contact::factory()->times(15)->create();
+        Contact::factory()->times(6)->create();
 
-        // This is just to ensure that pagination is pulling from here
+        // This is just to ensure that pagination is configurable
         $this->app['config']->set('system.pagination_amount', 5);
 
 
@@ -57,5 +63,30 @@ class ContactControllerTest extends TestCase
                     )->etc()
 
             );
+    }
+
+    /** @test */
+    public function it_can_create_new_contacts()
+    {
+        $this->assertEquals(0, Contact::count());
+
+        $response = $this->post(route('api.v1.contact.store'), [
+            'first_name' => $this->faker->firstName,
+            'last_name' => $this->faker->lastName,
+            'email' => $this->faker->unique()->email,
+            'phone_number' => $this->faker->phoneNumber,
+            'lead_source' => $this->faker->word,
+        ]);
+
+        $response->assertStatus(201);
+
+        $this->assertEquals(1, Contact::count());
+
+    }
+
+    /** @test */
+    public function it_validate_required_fields()
+    {
+        $this->markTestIncomplete();
     }
 }
