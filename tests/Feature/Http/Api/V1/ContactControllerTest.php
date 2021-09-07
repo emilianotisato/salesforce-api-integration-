@@ -85,6 +85,31 @@ class ContactControllerTest extends TestCase
     }
 
     /** @test */
+    public function it_can_update_contacts()
+    {
+        $contact = Contact::factory()->create([
+            'first_name' => 'Nikola',
+            'last_name' => 'Susa',
+            'email' => 'nikola.susa@omure.com'
+        ]);
+        $this->assertEquals('Nikola Susa', $contact->full_name);
+        $this->assertEquals('nikola.susa@omure.com', $contact->email);
+
+
+        $response = $this->put(route('api.v1.contact.update', [$contact]), [
+            'first_name' => 'Viktor',
+            'last_name' => 'Ryshkov',
+            'email' => 'viktor.ryshkov@omure.com',
+        ]);
+
+        $response->assertOk();
+
+        $contact->refresh();
+        $this->assertEquals('Viktor Ryshkov', $contact->full_name);
+        $this->assertEquals('viktor.ryshkov@omure.com', $contact->email);
+    }
+
+    /** @test */
     public function it_validate_required_fields()
     {
         $this->markTestIncomplete();

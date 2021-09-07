@@ -18,4 +18,15 @@ class ContactController extends Controller
     {
         return Contact::create($request->all());
     }
+
+    public function update(Contact $contact, Request $request)
+    {
+        return $contact->update($request->only(
+            'first_name',
+            'last_name',
+            'email',
+            'phone_number',
+            'lead_source',
+        ));
+    }
 }
