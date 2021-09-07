@@ -25,7 +25,12 @@ class ContactControllerTest extends TestCase
     {
         Contact::factory()->times(15)->create();
 
+        // This is just to ensure that pagination is pulling from here
+        $this->app['config']->set('system.pagination_amount', 5);
+
+
         $request = $this->get(route('api.v1.contact.index'));
+
 
         $request->assertOk()
             ->assertJsonStructure([
@@ -33,12 +38,24 @@ class ContactControllerTest extends TestCase
                     '*' => [
                         'first_name',
                         'last_name',
+                        'full_name',
                         'email',
                         'phone_number',
                         'lead_source',
-                        'salesforce_id'
                     ]
                 ]
-            ]);
+            ])
+            ->assertJson(
+                fn (AssertableJson $json) =>
+                $json
+                ->has('data', 5)
+                    ->has(
+                        'data.0',
+                        fn ($json) =>
+                        $json->missing('salesforce_id')
+                            ->etc()
+                    )->etc()
+
+            );
     }
 }
