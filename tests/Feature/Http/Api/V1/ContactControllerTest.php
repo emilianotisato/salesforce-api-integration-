@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Http\Api\V1;
 
+use App\Jobs\SyncSalesforceContactJob;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Contact;
@@ -11,6 +12,7 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Testing\Fluent\AssertableJson;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Queue;
 
 class ContactControllerTest extends TestCase
 {
@@ -35,7 +37,7 @@ class ContactControllerTest extends TestCase
     /** @test */
     public function it_list_paginated_contacts()
     {
-        Contact::factory()->times(6)->create();
+        Contact::withoutEvents(fn() => Contact::factory()->times(6)->create());
 
         // This is just to ensure that pagination is configurable
         $this->app['config']->set('system.pagination_amount', 5);
@@ -74,8 +76,10 @@ class ContactControllerTest extends TestCase
     /** @test */
     public function it_can_create_a_new_contact()
     {
-        $this->assertEquals(0, Contact::count());
+        Queue::fake();
+        Http::fake([config('salesforce.base_api_url') .'*']);
 
+        $this->assertEquals(0, Contact::count());
         $response = $this->postJson(route('api.v1.contact.store'), [
             'first_name' => $this->faker->firstName,
             'last_name' => $this->faker->lastName,
@@ -83,6 +87,10 @@ class ContactControllerTest extends TestCase
             'phone_number' => $this->faker->phoneNumber,
             'lead_source' => $this->faker->word,
         ]);
+
+        Queue::assertPushed(function(SyncSalesforceContactJob $job) {
+            return $job->type === 'created';
+        });
 
         $response->assertStatus(201);
 
@@ -92,11 +100,17 @@ class ContactControllerTest extends TestCase
     /** @test */
     public function it_can_update_a_contact()
     {
+        Queue::fake();
+        Http::fake([config('salesforce.base_api_url') .'*']);
+
         $contact = Contact::factory()->create([
             'first_name' => 'Nikola',
             'last_name' => 'Susa',
             'email' => 'nikola.susa@omure.com'
         ]);
+
+
+
         $this->assertEquals('Nikola Susa', $contact->full_name);
         $this->assertEquals('nikola.susa@omure.com', $contact->email);
 
@@ -106,6 +120,10 @@ class ContactControllerTest extends TestCase
             'last_name' => 'Ryshkov',
             'email' => 'viktor.ryshkov@omure.com',
         ]);
+
+        Queue::assertPushed(function(SyncSalesforceContactJob $job) {
+            return $job->type === 'updated';
+        });
 
         $response->assertOk();
 
@@ -135,9 +153,8 @@ class ContactControllerTest extends TestCase
         /**
          * Updating
          */
-        $contact = Contact::factory()->create([
-            'email' => 'some.known@email.com'
-        ]);
+        Contact::withoutEvents(fn() => Contact::factory()->create(['email' => 'some.known@email.com']));
+        $contact = Contact::where('email', 'some.known@email.com')->first();
 
         $response = $this->putJson(route('api.v1.contact.update', $contact), [
             'first_name' => '',
@@ -167,9 +184,8 @@ class ContactControllerTest extends TestCase
     /** @test */
     public function it_can_show_a_single_contact()
     {
-        $contact = Contact::factory()->create([
-            'email' => 'some.known@email.com'
-        ]);
+        Contact::withoutEvents(fn() => Contact::factory()->create(['email' => 'some.known@email.com']));
+        $contact = Contact::where('email', 'some.known@email.com')->first();
 
         $request = $this->getJson(route('api.v1.contact.show', $contact));
 
@@ -193,6 +209,9 @@ class ContactControllerTest extends TestCase
     /** @test */
     public function it_can_delete_a_contact()
     {
+        Queue::fake();
+        Http::fake([config('salesforce.base_api_url') .'*']);
+
         $contact = Contact::factory()->create();
 
         $this->assertEquals(1, Contact::count());
@@ -200,13 +219,20 @@ class ContactControllerTest extends TestCase
         $request = $this->deleteJson(route('api.v1.contact.delete', $contact));
         $request->assertOk();
 
+        Queue::assertPushed(function(SyncSalesforceContactJob $job) {
+            return $job->type === 'deleted';
+        });
+
         $this->assertEquals(0, Contact::count());
     }
 
     /** @test */
     public function it_can_sync_contacts_from_salesforce()
     {
-        $existingContact = Contact::factory()->create([
+        Queue::fake();
+        Http::fake([config('salesforce.base_api_url') .'*']);
+
+        Contact::factory()->create([
             'first_name' => 'Nikola',
             'last_name' => 'Susa',
             'email' => 'wrongemail@to_be_updated.com',
@@ -245,6 +271,13 @@ class ContactControllerTest extends TestCase
         ])]);
 
         $request = $this->getJson(route('api.v1.contact.sync'));
+
+        Queue::assertPushed(function(SyncSalesforceContactJob $job) {
+            return $job->type === 'created';
+        });
+        Queue::assertPushed(function(SyncSalesforceContactJob $job) {
+            return $job->type === 'updated';
+        });
 
         $request->assertOk();
 
