@@ -15,6 +15,5 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    dd(new SalesforceApi());
     return view('welcome');
 });
