@@ -183,4 +183,17 @@ class ContactControllerTest extends TestCase
         $this->assertEquals($contact->id, $request->getData()->data->contact_id);
         $this->assertEquals('some.known@email.com', $request->getData()->data->email);
     }
+
+    /** @test */
+    public function it_can_delete_a_contact()
+    {
+        $contact = Contact::factory()->create();
+
+        $this->assertEquals(1, Contact::count());
+
+        $request = $this->deleteJson(route('api.v1.contact.delete', $contact));
+        $request->assertOk();
+
+        $this->assertEquals(0, Contact::count());
+    }
 }
