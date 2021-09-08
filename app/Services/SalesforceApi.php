@@ -70,5 +70,10 @@ class SalesforceApi
     {
        return json_decode($this->http->get($this->module.'/'.$id)->body());
     }
+
+    public function create(array $data) : object
+    {
+        return json_decode($this->http->asMultipart()->post($this->module.'/', $data)->body());
+    }
 }
 

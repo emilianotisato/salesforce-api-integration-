@@ -85,4 +85,28 @@ class SalesforceApiTest extends TestCase
 
         $this->assertEquals('agreen@uog.com', $contact->email);
     }
+
+    /** @test */
+    public function it_can_create_contact_record()
+    {
+        Cache::put('salesforce_token', 'some-token', config('salesforce.token_ttl'));
+
+        Http::fake([config('salesforce.base_api_url') . 'contacts/' => Http::response([
+            "errors" => [],
+            "id" => "00U5e00000AIBecEAH",
+            "success" => true
+        ])]);
+
+        $salesforce = new SalesforceApi();
+
+        $response = $salesforce->contacts()->create([
+            "email" => "agreen@uog.com",
+            "first_name" => "Avi",
+            "last_name" => "Green",
+            "lead_source" => "Public Relations",
+            "title" => "CFO"
+        ]);
+
+        $this->assertEquals('00U5e00000AIBecEAH', $response->id);
+    }
 }
