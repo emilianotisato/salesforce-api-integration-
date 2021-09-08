@@ -270,7 +270,7 @@ class ContactControllerTest extends TestCase
             "total" => 2
         ])]);
 
-        $request = $this->getJson(route('api.v1.contact.sync'));
+        $request = $this->postJson(route('api.v1.contact.sync'));
 
         Queue::assertPushed(function(SyncSalesforceContactJob $job) {
             return $job->type === 'created';

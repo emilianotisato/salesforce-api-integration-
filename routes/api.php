@@ -22,7 +22,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum'], 'as' => 'api.v1.'], function () {
     Route::get('/contacts', [ContactController::class, 'index'])->name('contact.index');
     Route::post('/contacts', [ContactController::class, 'store'])->name('contact.store');
-    Route::get('/contacts/sync', [ContactController::class, 'sync'])->name('contact.sync');
+    Route::post('/contacts/sync', [ContactController::class, 'sync'])->name('contact.sync');
     Route::put('/contacts/{contact}', [ContactController::class, 'update'])->name('contact.update');
     Route::get('/contacts/{contact}', [ContactController::class, 'show'])->name('contact.show');
     Route::delete('/contacts/{contact}', [ContactController::class, 'delete'])->name('contact.delete');
