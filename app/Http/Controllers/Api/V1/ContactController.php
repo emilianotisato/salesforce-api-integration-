@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ContactRequest;
 use App\Http\Resources\ContactResource;
+use App\Services\SalesforceApi;
 
 class ContactController extends Controller
 {
@@ -70,5 +71,34 @@ class ContactController extends Controller
     public function delete(Contact $contact)
     {
         return $contact->delete();
+    }
+
+    /**
+     * Sync contacts with Salesforce
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param \App\Services\SalesforceApi $salesforce
+     * @return void
+     */
+    public function sync(Request $request, SalesforceApi $salesforce)
+    {
+        // TODO we are not validating here becouse we trust the data comming from the API, should we add validation?
+
+        $salesforce->module('contacts')->all()->each(function ($sfContact) {
+            $contact = Contact::where('salesforce_id', $sfContact->id)->first();
+            if($sfContact->is_deleted && $contact) {
+                $contact->delete();
+                return;
+            }
+
+            if($contact) {
+                $contact->update((array) $sfContact);
+            } else {
+                // Normalize salesforce ID
+                $data = array_merge((array) $sfContact, ['salesforce_id' => $sfContact->id]);
+
+                Contact::create($data);
+            }
+        });
     }
 }

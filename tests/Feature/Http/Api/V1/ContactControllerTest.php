@@ -5,9 +5,12 @@ namespace Tests\Feature\Http\Api\V1;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Contact;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Testing\Fluent\AssertableJson;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 
 class ContactControllerTest extends TestCase
 {
@@ -23,7 +26,10 @@ class ContactControllerTest extends TestCase
     /** @test */
     public function it_only_allows_authenticated_users()
     {
-        $this->markTestIncomplete();
+        Auth::logout();
+
+        $request = $this->getJson(route('api.v1.contact.index'));
+        $request->assertStatus(401);
     }
 
     /** @test */
@@ -195,5 +201,56 @@ class ContactControllerTest extends TestCase
         $request->assertOk();
 
         $this->assertEquals(0, Contact::count());
+    }
+
+    /** @test */
+    public function it_can_sync_contacts_from_salesforce()
+    {
+        $existingContact = Contact::factory()->create([
+            'first_name' => 'Nikola',
+            'last_name' => 'Susa',
+            'email' => 'wrongemail@to_be_updated.com',
+            'salesforce_id' => 'sf-id-2'
+        ]);
+
+        $this->assertEquals(1, Contact::count());
+
+        Cache::put('salesforce_token', 'some-token', config('salesforce.token_ttl'));
+
+        Http::fake([config('salesforce.base_api_url') . 'contacts/' => Http::response([
+            "records" => [
+                [
+                    "description" => null,
+                    "email" => "viktor.ryshkov@omure.com",
+                    "first_name" => "Viktor",
+                    "id" => "sf-id-1",
+                    "is_deleted" => false,
+                    "last_name" => "Ryshkov",
+                    "lead_source" => "Omure",
+                    "title" => "CEO"
+                ],
+                [
+                    "description" => null,
+                    "email" => "nikola.susa@omure.com",
+                    "first_name" => "Nikola",
+                    "id" => "sf-id-2",
+                    "is_deleted" => false,
+                    "last_name" => "Susa",
+                    "lead_source" => "Omure",
+                    "title" => "CTO"
+                ],
+            ],
+            "status" => true,
+            "total" => 2
+        ])]);
+
+        $request = $this->getJson(route('api.v1.contact.sync'));
+
+        $request->assertOk();
+
+        $contacts = Contact::all();
+        $this->assertEquals(2, $contacts->count());
+        $this->assertEquals('nikola.susa@omure.com', $contacts->where('salesforce_id', 'sf-id-2')->first()->email);
+        $this->assertEquals('viktor.ryshkov@omure.com', $contacts->where('salesforce_id', 'sf-id-1')->first()->email);
     }
 }

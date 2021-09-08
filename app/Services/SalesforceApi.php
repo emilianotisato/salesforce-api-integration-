@@ -70,6 +70,7 @@ class SalesforceApi
      */
     public function all(): Collection
     {
+        // TODO, if api were paginated we can use Lazy Collections
         return collect(
             json_decode($this->http->get($this->module . '/')->body())->records
         );

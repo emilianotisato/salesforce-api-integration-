@@ -20,7 +20,7 @@ class CreateContactsTable extends Migration
             $table->string('email')->unique();
             $table->string('phone_number')->nullable();
             $table->string('lead_source')->nullable();
-            $table->string('salesforce_id')->nullable()->unique();
+            $table->string('salesforce_id')->nullable()->unique()->index();
             $table->timestamps();
         });
     }
