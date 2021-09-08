@@ -47,12 +47,28 @@ class SalesforceApi
         return $this;
     }
 
+    /**
+     * Fetch all from a base module url
+     *
+     * @return \Illuminate\Support\Collection
+     */
     public function all() : Collection
     {
        return collect(
            json_decode($this->http->get($this->module.'/')->body())->records
        );
 
+    }
+
+    /**
+     * Get a record by id on a base module url
+     *
+     * @param string $id
+     * @return object
+     */
+    public function getById(string $id) : object
+    {
+       return json_decode($this->http->get($this->module.'/'.$id)->body());
     }
 }
 

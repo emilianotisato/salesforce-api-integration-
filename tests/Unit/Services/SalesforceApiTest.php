@@ -62,4 +62,27 @@ class SalesforceApiTest extends TestCase
         $this->assertEquals(1, $contacts->count());
         $this->assertEquals('0035e00000BVJ4hAAH', $contacts->first()->id);
     }
+
+    /** @test */
+    public function it_can_fetch_single_contact_from_salesforce()
+    {
+        Cache::put('salesforce_token', 'some-token', config('salesforce.token_ttl'));
+
+        Http::fake([config('salesforce.base_api_url') . 'contacts/0035e00000BVJ4hAAH' => Http::response([
+            "account_id" => "0015e00000F2CgJAAV",
+            "description" => null,
+            "email" => "agreen@uog.com",
+            "first_name" => "Avi",
+            "id" => "0035e00000BVJ4hAAH",
+            "is_deleted" => false,
+            "last_name" => "Green",
+            "lead_source" => "Public Relations",
+            "title" => "CFO"
+        ])]);
+
+        $salesforce = new SalesforceApi();
+        $contact = $salesforce->contacts()->getById("0035e00000BVJ4hAAH");
+
+        $this->assertEquals('agreen@uog.com', $contact->email);
+    }
 }
