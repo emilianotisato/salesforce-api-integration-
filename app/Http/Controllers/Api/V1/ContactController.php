@@ -30,4 +30,9 @@ class ContactController extends Controller
             'lead_source',
         ));
     }
+
+    public function show(Contact $contact)
+    {
+        return ContactResource::make($contact);
+    }
 }

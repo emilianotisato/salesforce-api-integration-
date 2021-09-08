@@ -81,7 +81,6 @@ class ContactControllerTest extends TestCase
         $response->assertStatus(201);
 
         $this->assertEquals(1, Contact::count());
-
     }
 
     /** @test */
@@ -96,7 +95,7 @@ class ContactControllerTest extends TestCase
         $this->assertEquals('nikola.susa@omure.com', $contact->email);
 
 
-        $response = $this->putJson(route('api.v1.contact.update', [$contact]), [
+        $response = $this->putJson(route('api.v1.contact.update', $contact), [
             'first_name' => 'Viktor',
             'last_name' => 'Ryshkov',
             'email' => 'viktor.ryshkov@omure.com',
@@ -112,7 +111,7 @@ class ContactControllerTest extends TestCase
     /** @test */
     public function it_validate_required_fields()
     {
-         $this->assertEquals(0, Contact::count());
+        $this->assertEquals(0, Contact::count());
 
         $response = $this->postJson(route('api.v1.contact.store'), [
             'first_name' => '',
@@ -134,7 +133,7 @@ class ContactControllerTest extends TestCase
             'email' => 'some.known@email.com'
         ]);
 
-        $response = $this->putJson(route('api.v1.contact.update', [$contact]), [
+        $response = $this->putJson(route('api.v1.contact.update', $contact), [
             'first_name' => '',
             'last_name' => '',
             'email' => '',
@@ -157,5 +156,31 @@ class ContactControllerTest extends TestCase
 
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['email']);
+    }
+
+    /** @test */
+    public function it_can_show_a_single_contact()
+    {
+        $contact = Contact::factory()->create([
+            'email' => 'some.known@email.com'
+        ]);
+
+        $request = $this->getJson(route('api.v1.contact.show', $contact));
+
+        $request->assertOk()
+            ->assertJsonStructure([
+                'data' => [
+                    'contact_id',
+                    'first_name',
+                    'last_name',
+                    'full_name',
+                    'email',
+                    'phone_number',
+                    'lead_source',
+                ]
+            ]);
+
+        $this->assertEquals($contact->id, $request->getData()->data->contact_id);
+        $this->assertEquals('some.known@email.com', $request->getData()->data->email);
     }
 }
