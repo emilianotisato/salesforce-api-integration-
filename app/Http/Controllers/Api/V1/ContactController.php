@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\ContactCreated;
+use App\Events\ContactDeleted;
+use App\Events\ContactSyncFinished;
+use App\Events\ContactSyncStarted;
+use App\Events\ContactUpdated;
 use App\Models\Contact;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -30,7 +35,9 @@ class ContactController extends Controller
      */
     public function store(ContactRequest $request)
     {
-        return Contact::create($request->all());
+        $contact = Contact::create($request->all());
+        ContactCreated::dispatch($contact);
+        return $contact;
     }
 
     /**
@@ -42,13 +49,17 @@ class ContactController extends Controller
      */
     public function update(Contact $contact, ContactRequest $request)
     {
-        return $contact->update($request->only(
+        $contact->update($request->only(
             'first_name',
             'last_name',
             'email',
             'phone_number',
             'lead_source',
         ));
+
+        ContactUpdated::dispatch($contact);
+
+        return $contact;
     }
 
     /**
@@ -70,7 +81,10 @@ class ContactController extends Controller
      */
     public function delete(Contact $contact)
     {
-        return $contact->delete();
+        $contact->delete();
+        ContactDeleted::dispatch($contact);
+
+        return;
     }
 
     /**
@@ -82,16 +96,17 @@ class ContactController extends Controller
      */
     public function sync(Request $request, SalesforceApi $salesforce)
     {
-        // TODO we are not validating here becouse we trust the data comming from the API, should we add validation?
+        ContactSyncStarted::dispatch();
 
         $salesforce->module('contacts')->all()->each(function ($sfContact) {
+            // TODO we are not validating here becouse we trust the data comming from the API, should we add validation?
             $contact = Contact::where('salesforce_id', $sfContact->id)->first();
-            if($sfContact->is_deleted && $contact) {
+            if ($sfContact->is_deleted && $contact) {
                 $contact->delete();
                 return;
             }
 
-            if($contact) {
+            if ($contact) {
                 $contact->update((array) $sfContact);
             } else {
                 // Normalize salesforce ID
@@ -100,5 +115,7 @@ class ContactController extends Controller
                 Contact::create($data);
             }
         });
+
+        ContactSyncFinished::dispatch();
     }
 }

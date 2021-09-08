@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Events\ContactSyncFinished;
+use App\Events\ContactSyncStarted;
+use App\Models\Contact;
+use App\Observers\ContactObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -18,6 +22,12 @@ class EventServiceProvider extends ServiceProvider
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],
+        ContactSyncStarted::class => [
+            // Implement your listener here
+        ],
+        ContactSyncFinished::class => [
+            // Implement your listener here
+        ]
     ];
 
     /**
@@ -27,6 +37,6 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        Contact::observe(ContactObserver::class);
     }
 }
