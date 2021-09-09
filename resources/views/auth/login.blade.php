@@ -1,7 +1,16 @@
 <x-guest-layout>
     <x-jet-authentication-card>
         <x-slot name="logo">
-            <x-jet-authentication-card-logo />
+            {{-- <x-jet-authentication-card-logo /> --}}
+            <div style="    -webkit-text-size-adjust: 100%;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            line-height: 1.5;
+            font-family: Montserrat,sans-serif;
+            font-weight: 300;
+            color: #373737;
+            font-size: 44px;
+            text-align: center;
+            box-sizing: border-box;">Omure</div>
         </x-slot>
 
         <x-jet-validation-errors class="mb-4" />
