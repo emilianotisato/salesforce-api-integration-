@@ -99,20 +99,24 @@ class ContactController extends Controller
         ContactSyncStarted::dispatch();
 
         $salesforce->module('contacts')->all()->each(function ($sfContact) {
-            // TODO we are not validating here becouse we trust the data comming from the API, should we add validation?
-            $contact = Contact::where('salesforce_id', $sfContact->id)->first();
-            if ($sfContact->is_deleted && $contact) {
-                $contact->delete();
-                return;
-            }
+            try {
+                // TODO we are not validating here becouse we trust the data comming from the API, should we add validation?
+                $contact = Contact::where('salesforce_id', $sfContact->id)->first();
+                if ($sfContact->is_deleted && $contact) {
+                    $contact->delete();
+                    return;
+                }
 
-            if ($contact) {
-                $contact->update((array) $sfContact);
-            } else {
-                // Normalize salesforce ID
-                $data = array_merge((array) $sfContact, ['salesforce_id' => $sfContact->id]);
+                if ($contact) {
+                    $contact->update((array) $sfContact);
+                } else {
+                    // Normalize salesforce ID
+                    $data = array_merge((array) $sfContact, ['salesforce_id' => $sfContact->id]);
 
-                Contact::create($data);
+                    Contact::create($data);
+                }
+            } catch (\Throwable $th) {
+                //throw $th;
             }
         });
 
